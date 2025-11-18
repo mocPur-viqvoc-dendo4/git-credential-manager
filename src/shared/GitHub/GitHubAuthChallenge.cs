@@ -37,7 +37,7 @@ public class GitHubAuthChallenge : IEquatable<GitHubAuthChallenge>
     private static IDictionary<string, string> ParseProperties(string str)
     {
         var props = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (string prop in str.Split(' '))
+        foreach (string prop in str.Split(' ', StringSplitOptions.RemoveEmptyEntries))
         {
             int delim = prop.IndexOf('=');
             if (delim < 0)
@@ -45,8 +45,10 @@ public class GitHubAuthChallenge : IEquatable<GitHubAuthChallenge>
                 continue;
             }
 
-            string key = prop.Substring(0, delim).Trim();
-            string value = prop.Substring(delim + 1).Trim('"');
+            // Use AsSpan to avoid string allocations
+            ReadOnlySpan<char> propSpan = prop.AsSpan();
+            string key = propSpan.Slice(0, delim).Trim().ToString();
+            string value = propSpan.Slice(delim + 1).Trim('"').ToString();
 
             props[key] = value;
         }
@@ -85,8 +87,9 @@ public class GitHubAuthChallenge : IEquatable<GitHubAuthChallenge>
             return string.IsNullOrWhiteSpace(Domain);
         }
 
-        string shortCode = userName.Substring(delim + 1);
-        return StringComparer.OrdinalIgnoreCase.Equals(Domain, shortCode);
+        // Use AsSpan to avoid string allocation
+        ReadOnlySpan<char> shortCode = userName.AsSpan(delim + 1);
+        return shortCode.Equals(Domain, StringComparison.OrdinalIgnoreCase);
     }
 
     public bool Equals(GitHubAuthChallenge other)
@@ -107,7 +110,7 @@ public class GitHubAuthChallenge : IEquatable<GitHubAuthChallenge>
 
     public override int GetHashCode()
     {
-        return Domain.GetHashCode() * 1019 ^
-               Enterprise.GetHashCode() * 337;
+        return (Domain?.GetHashCode() ?? 0) * 1019 ^
+               (Enterprise?.GetHashCode() ?? 0) * 337;
     }
 }
