@@ -34,6 +34,10 @@ namespace GitHub
         /// </summary>
         private const int RequestTimeout = 15 * 1000; // 15 second limit
 
+        private static readonly Regex TokenRegex = new Regex(
+            @"\s*""token""\s*:\s*""([^""]+)""\s*",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
         private readonly ICommandContext _context;
 
         public GitHubRestApi(ICommandContext context)
@@ -183,10 +187,8 @@ namespace GitHub
             string token = null;
             string responseText = await response.Content.ReadAsStringAsync();
 
-            Match tokenMatch;
-            if ((tokenMatch = Regex.Match(responseText, @"\s*""token""\s*:\s*""([^""]+)""\s*",
-                    RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)).Success
-                && tokenMatch.Groups.Count > 1)
+            Match tokenMatch = TokenRegex.Match(responseText);
+            if (tokenMatch.Success && tokenMatch.Groups.Count > 1)
             {
                 token = tokenMatch.Groups[1].Value;
             }

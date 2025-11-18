@@ -190,6 +190,10 @@ namespace Microsoft.AzureRepos
 
         private const RegexOptions CommonRegexOptions = RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase;
 
+        private static readonly Regex AuthorityUriRegex = new Regex(
+            @"^authorization_uri=(?'authority'.+)$",
+            CommonRegexOptions);
+
         private HttpClient _httpClient;
 
         private HttpClient HttpClient
@@ -222,7 +226,7 @@ namespace Microsoft.AzureRepos
                 StringComparer.OrdinalIgnoreCase.Equals(header.Scheme, Constants.Http.WwwAuthenticateBearerScheme) &&
                 header.Parameter is string headerValue)
             {
-                Match match = Regex.Match(headerValue, @"^authorization_uri=(?'authority'.+)$", CommonRegexOptions);
+                Match match = AuthorityUriRegex.Match(headerValue);
 
                 if (match.Success)
                 {

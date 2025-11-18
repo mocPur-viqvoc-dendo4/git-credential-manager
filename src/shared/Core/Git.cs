@@ -70,6 +70,8 @@ namespace GitCredentialManager
 
     public class GitProcess : IGit
     {
+        private static readonly Regex GitVersionRegex = new Regex(@"^git version (?'value'.*)", RegexOptions.Compiled);
+
         private readonly ITrace _trace;
         private readonly ITrace2 _trace2;
         private readonly IProcessManager _processManager;
@@ -104,7 +106,7 @@ namespace GitCredentialManager
                         string data = git.StandardOutput.ReadToEnd();
                         git.WaitForExit();
 
-                        Match match = Regex.Match(data, @"^git version (?'value'.*)");
+                        Match match = GitVersionRegex.Match(data);
                         if (match.Success)
                         {
                             _version = new GitVersion(match.Groups["value"].Value);
@@ -192,17 +194,19 @@ namespace GitCredentialManager
                 for (int i = 0; i + 1 < lines.Length; i += 2)
                 {
                     // The fetch URL is written first, followed by the push URL
-                    string[] fetchLine = lines[i].Split();
-                    string[] pushLine = lines[i + 1].Split();
+                    string[] fetchLine = lines[i].Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                    string[] pushLine = lines[i + 1].Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+
+                    // Skip if line is empty
+                    if (fetchLine.Length == 0 || pushLine.Length == 0)
+                        continue;
 
                     // Remote name is always first (and should match between fetch/push)
                     string remoteName = fetchLine[0];
 
                     // The next part, if present, is the URL
-                    string fetchUrl = null;
-                    string pushUrl = null;
-                    if (fetchLine.Length > 1 && !string.IsNullOrWhiteSpace(fetchLine[1])) fetchUrl = fetchLine[1].TrimEnd();
-                    if (pushLine.Length > 1 && !string.IsNullOrWhiteSpace(pushLine[1]))   pushUrl  = pushLine[1].TrimEnd();
+                    string fetchUrl = fetchLine.Length > 1 ? fetchLine[1] : null;
+                    string pushUrl = pushLine.Length > 1 ? pushLine[1] : null;
 
                     yield return new GitRemote(remoteName, fetchUrl, pushUrl);
                 }

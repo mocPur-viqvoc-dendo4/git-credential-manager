@@ -218,8 +218,10 @@ namespace GitCredentialManager
             int splitIndex = line.IndexOf('=');
             if (splitIndex > 0)
             {
-                string key = line.Substring(0, splitIndex);
-                string value = line.Substring(splitIndex + 1);
+                // Use AsSpan to avoid string allocations for key/value extraction
+                ReadOnlySpan<char> lineSpan = line.AsSpan();
+                string key = lineSpan.Slice(0, splitIndex).ToString();
+                string value = lineSpan.Slice(splitIndex + 1).ToString();
 
                 dict[key] = value;
             }
@@ -230,14 +232,19 @@ namespace GitCredentialManager
             int splitIndex = line.IndexOf('=');
             if (splitIndex > 0)
             {
-                string key = line.Substring(0, splitIndex);
-                string value = line.Substring(splitIndex + 1);
+                // Use AsSpan to avoid string allocations
+                ReadOnlySpan<char> lineSpan = line.AsSpan();
+                ReadOnlySpan<char> keySpan = lineSpan.Slice(0, splitIndex);
+                ReadOnlySpan<char> valueSpan = lineSpan.Slice(splitIndex + 1);
 
-                bool multi = key.EndsWith("[]");
+                bool multi = keySpan.EndsWith("[]");
                 if (multi)
                 {
-                    key = key.Substring(0, key.Length - 2);
+                    keySpan = keySpan.Slice(0, keySpan.Length - 2);
                 }
+                
+                string key = keySpan.ToString();
+                string value = valueSpan.ToString();
 
                 if (!dict.TryGetValue(key, out IList<string> list))
                 {
